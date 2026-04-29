@@ -140,6 +140,7 @@
     <div class="game-header">
       <span class="round-badge" id="roundBadge">第 1 题 / 10</span>
       <span class="score-display" id="scoreDisplay">⭐ 0</span>
+      <button id="bgmToggle" onclick="toggleBGM()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:18px;padding:6px 12px;border-radius:20px;cursor:pointer;min-width:44px">🔇</button>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <div class="game-body">
@@ -304,7 +305,7 @@ function selectAnswer(btn,sel,correct) {
   if(answered)return; answered=true;
   document.querySelectorAll('.option-btn').forEach(b=>{if(parseInt(b.textContent)===correct)b.classList.add('correct')});
   if(sel===correct){btn.classList.add('correct');roundCorrect++;spawnParticles('✅')}
-  else{btn.classList.add('wrong');spawnParticles('❌')}
+  else{btn.classList.add('wrong');sfxWrong();spawnParticles('❌')}
   document.getElementById('scoreDisplay').textContent=`⭐ ${roundCorrect}`;
   setTimeout(()=>{questionNum++;questionNum<10?showQuestion():showResult()},1000);
 }
@@ -339,7 +340,7 @@ function showResult() {
   document.getElementById('nextRoundBtn').style.display='none';
 
   document.getElementById('chest').onclick=()=>{
-    if(st.dataset.opened)return;st.dataset.opened='true';
+    if(st.dataset.opened)return;st.dataset.opened='true'; sfxChestOpen();
     st.textContent='🎁 开宝箱中...';
     const foods=FOODS[ct],food=foods[Math.floor(Math.random()*foods.length)];
     const existing=collection.find(c=>c.name===food.name);
@@ -417,6 +418,125 @@ function closeCardDetail() {
   document.getElementById('cardOverlay').classList.remove('show');
   document.body.style.overflow='';
 }
+// ===== Web Audio 音效引擎 =====
+let audioCtx = null;
+let bgmPlaying = false;
+let bgmNodes = [];
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+// 播放简短音效
+function playTone(freq, duration, type='sine', vol=0.3) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// 点击选项音效
+function sfxClick() { playTone(800, 0.08, 'sine', 0.15); playTone(1000, 0.06, 'sine', 0.1); }
+
+// 正确音效 - 上行琶音
+function sfxCorrect() {
+  setTimeout(() => playTone(523, 0.12, 'triangle', 0.25), 0);
+  setTimeout(() => playTone(659, 0.12, 'triangle', 0.25), 100);
+  setTimeout(() => playTone(784, 0.15, 'triangle', 0.25), 200);
+  setTimeout(() => playTone(1047, 0.25, 'triangle', 0.3), 300);
+}
+
+// 错误音效 - 下行
+function sfxWrong() {
+  playTone(300, 0.2, 'square', 0.12);
+  setTimeout(() => playTone(200, 0.3, 'square', 0.1), 150);
+}
+
+// 开宝箱音效 - 叮叮当当
+function sfxChestOpen() {
+  const notes = [523, 659, 784, 1047, 1319];
+  notes.forEach((f, i) => {
+    setTimeout(() => playTone(f, 0.2, 'sine', 0.2), i * 80);
+  });
+  setTimeout(() => {
+    [784, 880, 1047].forEach((f, i) => {
+      setTimeout(() => playTone(f, 0.4, 'triangle', 0.25), i * 150);
+    });
+  }, 500);
+}
+
+// ===== BGM - 中国五声音阶循环旋律 =====
+// 宫商角徵羽 = C D E G A
+const pentatonic = [262, 294, 330, 392, 440, 523, 588, 660, 784, 880];
+const melody = [
+  [0, 0.4], [2, 0.4], [4, 0.4], [7, 0.3], [5, 0.2],
+  [7, 0.5], [5, 0.3], [4, 0.2], [2, 0.4], [0, 0.6],
+  [1, 0.3], [2, 0.3], [4, 0.5], [2, 0.3], [0, 0.6],
+  [5, 0.4], [4, 0.3], [2, 0.3], [4, 0.4], [5, 0.5],
+];
+
+let bgmInterval = null;
+let bgmNoteIdx = 0;
+let bgmOsc = null;
+let bgmGain = null;
+
+function startBGM() {
+  if (!audioCtx || bgmPlaying) return;
+  bgmPlaying = true;
+  document.getElementById('bgmToggle').textContent = '🔊';
+
+  function playNextNote() {
+    if (!bgmPlaying) return;
+    const [noteIdx, dur] = melody[bgmNoteIdx % melody.length];
+    const freq = pentatonic[noteIdx];
+
+    if (bgmOsc) { try { bgmOsc.stop(); } catch(e) {} }
+    if (bgmGain) { try { bgmGain.disconnect(); } catch(e) {} }
+
+    bgmOsc = audioCtx.createOscillator();
+    bgmGain = audioCtx.createGain();
+    bgmOsc.type = 'triangle';
+    bgmOsc.frequency.value = freq;
+
+    const now = audioCtx.currentTime;
+    bgmGain.gain.setValueAtTime(0, now);
+    bgmGain.gain.linearRampToValueAtTime(0.08, now + 0.05);
+    bgmGain.gain.setValueAtTime(0.08, now + dur * 0.7);
+    bgmGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    bgmOsc.connect(bgmGain);
+    bgmGain.connect(audioCtx.destination);
+    bgmOsc.start(now);
+    bgmOsc.stop(now + dur + 0.1);
+
+    bgmNoteIdx++;
+    bgmInterval = setTimeout(playNextNote, dur * 1000 * 0.9);
+  }
+  playNextNote();
+}
+
+function stopBGM() {
+  bgmPlaying = false;
+  if (bgmInterval) clearTimeout(bgmInterval);
+  if (bgmOsc) { try { bgmOsc.stop(); } catch(e) {} }
+  if (bgmGain) { try { bgmGain.disconnect(); } catch(e) {} }
+  document.getElementById('bgmToggle').textContent = '🔇';
+}
+
+function toggleBGM() {
+  initAudio();
+  if (bgmPlaying) stopBGM();
+  else startBGM();
+}
+
 </script>
 
 </body>
