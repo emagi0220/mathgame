@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>数学大冒险 — 北京美食寻宝记</title>
+<style>
+  :root {
+    --bg:#0f0f23; --card:#1a1a3e; --gold:#ffd700;
+    --silver:#c0c0c0; --diamond:#00d4ff; --bronze:#cd7f32;
+    --correct:#2ecc71; --wrong:#e74c3c;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+    background:var(--bg);color:#fff;
+    user-select:none;-webkit-user-select:none;
+    -webkit-font-smoothing:antialiased;
+    display:flex;justify-content:center;align-items:stretch;
+  }
+  .app{width:100%;max-width:430px;padding:calc(20px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));display:flex;flex-direction:column;height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .app::-webkit-scrollbar{width:0}
+  .title{text-align:center;padding:20px 0 15px;flex-shrink:0}
+  .title h1{font-size:clamp(24px,7vw,30px);background:linear-gradient(135deg,#ffd700,#ff6b6b,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .title .subtitle{color:#aaa;margin-top:6px;font-size:clamp(13px,3.5vw,15px)}
+  .home-btns{display:flex;flex-direction:column;gap:16px;margin-top:30px;padding:0 5px}
+  .btn{width:100%;padding:18px 24px;border:none;border-radius:18px;font-size:clamp(17px,4.5vw,20px);font-weight:bold;cursor:pointer;transition:all .2s;text-align:center;min-height:56px;display:flex;align-items:center;justify-content:center}
+  .btn:active{transform:scale(.97);opacity:.9}
+  .btn-play{background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;box-shadow:0 4px 20px rgba(108,92,231,.4)}
+  .btn-collection{background:linear-gradient(135deg,#00b894,#00cec9);color:#fff;box-shadow:0 4px 20px rgba(0,184,148,.3)}
+  .btn-back{background:rgba(255,255,255,.1);color:#fff;margin-top:20px;min-height:50px}
+  .game-header{display:flex;justify-content:space-between;align-items:center;padding:10px 0;flex-shrink:0}
+  .round-badge{background:linear-gradient(135deg,#6c5ce7,#a855f7);padding:8px 18px;border-radius:20px;font-size:clamp(14px,3.8vw,16px);font-weight:bold}
+  .score-display{font-size:clamp(17px,4.5vw,20px);font-weight:bold;color:var(--gold)}
+  .progress-bar{width:100%;height:10px;background:rgba(255,255,255,.1);border-radius:5px;margin:12px 0;overflow:hidden;flex-shrink:0}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#6c5ce7,#a855f7);border-radius:5px;transition:width .4s}
+  .game-body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+  .question-area{text-align:center;padding:20px 0}
+  .question-text{font-size:clamp(44px,12vw,56px);font-weight:bold;color:#fff;text-shadow:0 0 30px rgba(168,85,247,.5);line-height:1.3;animation:fadeIn .5s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+  .options{display:flex;flex-direction:column;gap:12px;padding:0 5px}
+  .option-btn{padding:18px;background:var(--card);border:2px solid rgba(255,255,255,.15);border-radius:18px;color:#fff;font-size:clamp(28px,8vw,34px);font-weight:bold;cursor:pointer;transition:all .2s;min-height:44px}
+  .option-btn:active{border-color:#a855f7;background:rgba(168,85,247,.15)}
+  .option-btn.correct{border-color:var(--correct);background:rgba(46,204,113,.2);animation:pulse .4s}
+  .option-btn.wrong{border-color:var(--wrong);background:rgba(231,76,60,.2);animation:shake .4s}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .result-area{text-align:center;padding:15px 0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+  .result-title{font-size:clamp(22px,6vw,26px);margin-bottom:15px}
+  .chest-container{margin:15px 0;perspective:800px}
+  .chest{font-size:72px;display:inline-block;animation:float 2s ease-in-out infinite;cursor:pointer;transition:transform .3s}
+  .chest:active{transform:scale(.9)}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .chest.bronze .chest-icon{color:var(--bronze)}
+  .chest.silver .chest-icon{color:var(--silver)}
+  .chest.gold .chest-icon{color:var(--gold)}
+  .chest.diamond .chest-icon{color:var(--diamond)}
+  .chest-label{margin-top:8px;font-size:clamp(16px,4.5vw,18px);font-weight:bold;line-height:1.5}
+  .chest.bronze .chest-label{color:var(--bronze)}
+  .chest.silver .chest-label{color:var(--silver)}
+  .chest.gold .chest-label{color:var(--gold)}
+  .chest.diamond .chest-label{color:var(--diamond)}
+  .chest-status{margin-top:10px;padding:10px 20px;border-radius:12px;font-size:clamp(13px,3.5vw,15px);display:none}
+  .chest-status.visible{display:block;background:rgba(255,255,255,.1);animation:fadeIn .4s}
+  .card-reveal{display:none;margin:15px 0;width:100%;max-width:380px}
+  .card-reveal.show{display:block;animation:cardFlip .6s}
+  @keyframes cardFlip{0%{transform:rotateY(180deg);opacity:0}100%{transform:rotateY(0);opacity:1}}
+  .food-card{background:var(--card);border:2px solid rgba(255,255,255,.1);border-radius:16px;padding:18px;display:flex;align-items:center;gap:14px;cursor:pointer}
+  .food-card:active{opacity:.8}
+  .food-emoji{font-size:44px;flex-shrink:0}
+  .food-info h3{font-size:clamp(16px,4.5vw,18px);margin-bottom:4px}
+  .food-info p{font-size:clamp(12px,3.2vw,14px);color:#aaa;line-height:1.5}
+
+  /* 收藏网格 */
+  .collection-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:15px 0}
+  .collection-item{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 10px;text-align:center;animation:fadeIn .4s;cursor:pointer;transition:all .2s}
+  .collection-item:active{transform:scale(.96);border-color:#a855f7}
+  .collection-item .emoji{font-size:32px}
+  .collection-item .name{font-size:14px;margin-top:6px;font-weight:bold}
+  .collection-item .desc{font-size:11px;color:#888;margin-top:3px}
+  .empty-msg{text-align:center;color:#666;padding:50px 0;font-size:15px}
+
+  /* 卡片详情弹窗 */
+  .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:200;display:none;justify-content:center;align-items:center;padding:20px;
+    padding-top:calc(20px + var(--safe-top));padding-bottom:calc(20px + var(--safe-bottom))}
+  .overlay.show{display:flex;animation:fadeIn .3s}
+  .overlay-card{background:var(--card);border-radius:20px;width:100%;max-width:380px;max-height:85vh;max-height:85dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:scaleIn .3s}
+  .overlay-card::-webkit-scrollbar{width:0}
+  @keyframes scaleIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  .overlay-img{width:100%;height:220px;object-fit:cover;border-radius:20px 20px 0 0;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center}
+  .overlay-img img{width:100%;height:100%;object-fit:cover;border-radius:20px 20px 0 0}
+  .overlay-img .img-fallback{font-size:72px}
+  .overlay-img .img-loading{color:#666;font-size:14px}
+  .overlay-body{padding:18px 20px 24px}
+  .overlay-body h2{font-size:22px;margin-bottom:6px}
+  .overlay-body .rarity-badge{display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:bold;margin-bottom:10px}
+  .overlay-body .rarity-badge.bronze{background:rgba(205,127,50,.2);color:var(--bronze)}
+  .overlay-body .rarity-badge.silver{background:rgba(192,192,192,.2);color:var(--silver)}
+  .overlay-body .rarity-badge.gold{background:rgba(255,215,0,.2);color:var(--gold)}
+  .overlay-body .rarity-badge.diamond{background:rgba(0,212,255,.2);color:var(--diamond)}
+  .overlay-body .full-desc{font-size:14px;color:#ccc;line-height:1.7;margin-bottom:12px}
+  .overlay-body .meta{font-size:12px;color:#666}
+  .overlay-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .overlay-close:active{background:rgba(255,255,255,.3)}
+
+  /* 粒子效果 */
+  .particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
+  .particle{position:absolute;font-size:22px;animation:particleFly 1s ease-out forwards}
+  @keyframes particleFly{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(.5)}}
+  .page{display:none}
+  .page.active{display:flex;flex-direction:column;flex:1;min-height:0}
+  #collectionPage .title{text-align:center}
+  #collectionList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="particles" id="particles"></div>
+
+  <!-- 首页 -->
+  <div class="page active" id="homePage">
+    <div class="title">
+      <h1>🎮 数学大冒险</h1>
+      <div class="subtitle">答对题目 · 开宝箱 · 收集北京美食卡片！</div>
+    </div>
+    <div class="home-btns">
+      <button class="btn btn-play" onclick="startGame()">🚀 开始挑战</button>
+      <button class="btn btn-collection" onclick="showCollection()">📚 美食收藏册</button>
+    </div>
+  </div>
+
+  <!-- 游戏页面 -->
+  <div class="page" id="gamePage">
+    <div class="game-header">
+      <span class="round-badge" id="roundBadge">第 1 题 / 10</span>
+      <span class="score-display" id="scoreDisplay">⭐ 0</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="game-body">
+      <div class="question-area"><div class="question-text" id="questionText"></div></div>
+      <div class="options" id="optionsArea"></div>
+    </div>
+  </div>
+
+  <!-- 结算页面 -->
+  <div class="page" id="resultPage">
+    <div class="result-area">
+      <div class="result-title" id="resultTitle"></div>
+      <div class="chest-container">
+        <div class="chest" id="chest"><span class="chest-icon" id="chestIcon">📦</span></div>
+        <div class="chest-label" id="chestLabel"></div>
+        <div class="chest-status" id="chestStatus"></div>
+      </div>
+      <div class="card-reveal" id="cardReveal"></div>
+      <button class="btn btn-play" id="nextRoundBtn" onclick="nextRound()" style="display:none;margin-top:20px">🔄 下一轮</button>
+    </div>
+  </div>
+
+  <!-- 收藏册页面 -->
+  <div class="page" id="collectionPage">
+    <div class="title">
+      <h1>📚 美食收藏册</h1>
+      <div class="subtitle">开出的美食卡片都在这里 · 点击查看大图</div>
+    </div>
+    <div id="collectionList"></div>
+    <button class="btn btn-back" onclick="showPage('homePage')">⬅ 返回首页</button>
+  </div>
+</div>
+
+<!-- 卡片详情弹窗 -->
+<div class="overlay" id="cardOverlay" onclick="if(event.target===this)closeCardDetail()">
+  <div class="overlay-card" id="overlayCardContent"></div>
+</div>
+
+<script>
+// ========= 美食数据（含 Wikimedia 真实图片） =========
+const FOODS = {
+  bronze: [
+    { emoji:'🍜',name:'北京炸酱面',desc:'面条筋道，炸酱香浓，是老北京人的日常',rarity:'普通',
+      fullDesc:'北京炸酱面的灵魂是 "小碗干炸" —— 黄酱和甜面酱按比例混合，小火慢炸出酱香。配菜码（黄瓜丝、豆芽、萝卜丝、青豆等）是 "八碟八碗" 的讲究。面条必须是手擀的，筋道有嚼劲。一碗好的炸酱面，酱香浓郁却不咸，菜码清爽解腻。',
+      img:'math-game-images/zhajiangmian.jpg' },
+    { emoji:'🥟',name:'速冻饺子',desc:'家家都会包的家常味，白菜猪肉最经典',rarity:'普通',
+      fullDesc:'北京人过年必吃饺子。饺子形如元宝，寓意招财进宝。白菜猪肉馅是最经典的家常搭配，白菜清甜解腻，猪肉鲜香多汁。讲究的北京人家，饺子皮要自己擀，馅料要手剁，包的时候还要捏出漂亮的褶子。',
+      img:'math-game-images/jiaozi.jpg' },
+    { emoji:'🍜',name:'老北京打卤面',desc:'浓稠卤汁浇在面条上，料足味美',rarity:'普通',
+      fullDesc:'打卤面的 "卤" 是精髓：木耳、黄花菜、鸡蛋、肉片等在浓汤中勾芡，熬成深褐色的浓稠卤汁。面条煮好过凉水，浇上一大勺热卤，再撒点香菜末。夏天吃凉面打卤，冬天吃热面打卤，各有风味。',
+      img:'math-game-images/dulumian.jpg' },
+    { emoji:'🧆',name:'焦圈',desc:'老北京的传统油炸小吃，形如手镯',rarity:'普通',
+      fullDesc:'焦圈形如手镯，色泽深黄，焦香酥脆。据说是从清宫御膳房传出来的。传统的吃法是配豆汁儿——豆汁儿的酸馊味和焦圈的酥脆口感形成奇妙的对比。也可以配甜豆浆，外酥里软，一口下去满嘴焦香。',
+      img:'math-game-images/jiaoquan.jpg' },
+    { emoji:'🍲',name:'羊杂汤',desc:'冬日暖身神器，辣椒一拌香气四溢',rarity:'普通',
+      fullDesc:'老北京羊杂汤用羊肚、羊肝、羊肺、羊心等下水熬制，汤色乳白，鲜而不膻。配上一勺辣椒油、一撮香菜，趁热喝下去，从喉咙暖到胃里。北京冬天的清晨，一碗羊杂汤配两个烧饼，是老北京人最朴实的幸福。',
+      img:'math-game-images/yangzatang.jpg' },
+  ],
+  silver: [
+    { emoji:'🫕',name:'老北京铜锅涮羊肉',desc:'清水锅底，鲜切羊肉卷，麻酱蘸料是灵魂',rarity:'稀有',
+      fullDesc:'铜锅炭火，清水锅底，只放葱姜枸杞几颗大枣。羊肉要手切的才够薄，入锅三秒即熟。蘸料是灵魂——芝麻酱用香油澥开，加韭菜花、酱豆腐、香菜、辣椒油，各家有各家的秘方。吃完肉，锅底汤下面条，一顿涮肉才算圆满。',
+      img:'math-game-images/hotpot.jpg' },
+    { emoji:'🍖',name:'京酱肉丝',desc:'甜面酱炒出酱香，配葱丝黄瓜条卷饼吃',rarity:'稀有',
+      fullDesc:'京酱肉丝选用猪里脊肉切丝，用甜面酱爆炒，酱色红亮，肉丝嫩滑。吃的时候用豆腐皮卷上肉丝、葱丝、黄瓜条，一口咬下去，酱香、肉香、葱香、黄瓜的清爽在嘴里同时爆发。',
+      img:'math-game-images/jingjiangrousi.jpg' },
+    { emoji:'🥢',name:'乾隆白菜',desc:'麻酱拌白菜，酸甜开胃，年节必备凉菜',rarity:'稀有',
+      fullDesc:'乾隆白菜是 2000 年后才出现的新派北京凉菜。以黄心大白菜菜心为主料，手掰不用刀切，配麻酱、蜂蜜、陈醋、白糖、香油凉拌。酸甜开胃、清新爽口，是年节大鱼大肉后的解腻神器。名字虽然带了"乾隆"，但和乾隆皇帝并无历史关联。',
+      img:'math-game-images/qianlongbaicai.jpg' },
+    { emoji:'🫔',name:'艾窝窝',desc:'糯米外皮裹芝麻，软糯香甜的老北京点心',rarity:'稀有',
+      fullDesc:'艾窝窝是北京清真传统小吃，历史可追溯到明代。糯米粉做外皮，内包核桃仁、芝麻、瓜子仁、山药泥等馅料。成品色白如雪，质地粘软，口味香甜。过去是回民在节日时制作的点心，现在成了北京小吃 "十三绝" 之一。',
+      img:'math-game-images/aiwowo.jpg' },
+  ],
+  gold: [
+    { emoji:'🦆',name:'大董酥不腻烤鸭',desc:'6年改良的"酥不腻"，比传统更酥脆，油少肉嫩',rarity:'珍贵',
+      fullDesc:'大董（董振祥）花了六年时间改良传统挂炉烤鸭，创造了 "酥不腻" 流派。鸭皮不是传统的 "脆"，而是 "酥化"——入口即化、细嚼无渣。关键技术在两次风干去水、精确冷库温控、果木火候的极致掌握。被评为米其林星级，是北京烤鸭的新标杆。',
+      img:'math-game-images/dadong.jpg' },
+    { emoji:'🥮',name:'稻香村月饼',desc:'老北京老字号月饼，多种口味，传统手工',rarity:'珍贵',
+      fullDesc:'稻香村始创于 1895 年，是北京最负盛名的老字号糕点铺。月饼皮薄馅大，传统口味有五仁、豆沙、枣泥、莲蓉蛋黄等。每到中秋，稻香村门口排起长队，是老北京人雷打不动的仪式感。"买月饼去稻香村"是北京人的肌肉记忆。',
+      img:'math-game-images/mooncake.jpg' },
+    { emoji:'🥘',name:'北京锅贴',desc:'底部金黄酥脆，汤汁丰富，现做现吃最好',rarity:'珍贵',
+      fullDesc:'北京锅贴与煎饺不同——锅贴只煎底部，皮薄馅大，煎到金黄酥脆时淋入面粉水，盖上盖子焖熟。出锅时底部形成一层漂亮的冰花脆壳，咬开一包鲜汤。猪肉白菜馅和猪肉韭菜馅最经典。',
+      img:'math-game-images/guotie.jpg' },
+  ],
+  diamond: [
+    { emoji:'🏺',name:'全聚德挂炉烤鸭',desc:'北京烤鸭鼻祖，果木明火挂炉，皮脆肉香',rarity:'传说',
+      fullDesc:'全聚德始创于 1864 年（清同治三年），是挂炉烤鸭的鼻祖。明火挂炉，以枣木、杏木等果木为燃料，鸭子挂在炉内明火上方烤制。火力猛、温度高，鸭皮迅速形成脆壳，锁住肉汁。出炉时鸭皮枣红油亮，片鸭师傅现场片出 108 片，每一片都皮肉相连。周恩来总理曾用全聚德烤鸭宴请外宾，成就了 "不到长城非好汉，不吃烤鸭真遗憾" 的名言。',
+      img:'math-game-images/quanjude.jpg' },
+    { emoji:'🫖',name:'便宜坊焖炉烤鸭',desc:'没有明火焖烤，水分保留更多，肉质更嫩滑',rarity:'传说',
+      fullDesc:'便宜坊始创于 1416 年（明永乐十四年），比全聚德早了 400 多年！焖炉烤鸭的工艺完全不同：先把炉膛烧热，然后把鸭子放进去，关上门，靠炉壁的余热慢慢焖熟。没有明火，鸭子水分保留更多，肉质更加嫩滑多汁。如果说挂炉吃的是皮脆，那焖炉吃的就是肉嫩。',
+      img:'math-game-images/bianyifang.jpg' },
+    { emoji:'🫓',name:'都一处烧麦',desc:'乾隆爷都来过的老字号，三鲜馅烧麦是招牌',rarity:'传说',
+      fullDesc:'都一处始创于 1738 年，因乾隆皇帝除夕夜微服私访在此用餐而名扬天下。招牌三鲜烧麦皮薄如纸，馅料用猪肉、虾仁、海参精心调制，蒸熟后晶莹剔透，咬开汤汁四溢。乾隆皇帝亲笔题写的 "都一处" 匾额至今仍挂在店中。',
+      img:'math-game-images/shaomai.jpg' },
+    { emoji:'🥘',name:'东来顺铜锅涮肉',desc:'涮肉鼻祖，薄切羊肉卷，清水锅底见真功',rarity:'传说',
+      fullDesc:'东来顺始创于 1903 年，是北京铜锅涮肉的代名词。铜锅炭火、清水锅底，羊肉要手工切到薄可透光，入锅即熟。蘸料用芝麻酱、韭菜花、酱豆腐、辣椒油调制，各家有各家的秘方。"东来顺的羊肉——薄皮大馅" 是老北京人的口头禅。',
+      img:'math-game-images/donglaishun.jpg' },
+  ]
+};
+
+// 全局状态
+let collection = JSON.parse(localStorage.getItem('mathGameCollection') || '[]');
+let currentRound=0,roundCorrect=0,questionNum=0,questions=[],answered=false;
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById(id);
+  pg.classList.add('active');
+  document.querySelector('.app').scrollTop=0;
+}
+
+function startGame() {
+  currentRound++; roundCorrect=0; questionNum=0; questions=[];
+  generateQuestions(); showPage('gamePage'); showQuestion();
+}
+
+function generateQuestions() {
+  questions=[];
+  for(let i=0;i<10;i++) {
+    let n1,n2,op,ans;
+    if(Math.random()<.5) {
+      n1=Math.floor(Math.random()*11);
+      n2=Math.floor(Math.random()*(11-n1));
+      ans=n1+n2; op='+';
+    } else {
+      ans=Math.floor(Math.random()*11);
+      n2=Math.floor(Math.random()*(ans+1));
+      n1=ans+n2; op='-';
+    }
+    questions.push({n1,n2,op,ans});
+  }
+}
+
+function showQuestion() {
+  answered=false;
+  const q=questions[questionNum];
+  document.getElementById('questionText').textContent=`${q.n1} ${q.op==='+'?'+':'−'} ${q.n2} = ?`;
+  document.getElementById('roundBadge').textContent=`第 ${questionNum+1} 题 / 10`;
+  document.getElementById('progressFill').style.width=`${(questionNum/10)*100}%`;
+  document.getElementById('scoreDisplay').textContent=`⭐ ${roundCorrect}`;
+  const opts=genOpts(q.ans);
+  const area=document.getElementById('optionsArea');
+  area.innerHTML='';
+  opts.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='option-btn'; b.textContent=o;
+    b.addEventListener('pointerdown',e=>{e.preventDefault();selectAnswer(b,o,q.ans)});
+    area.appendChild(b);
+  });
+  const qt=document.getElementById('questionText');
+  qt.style.animation='none'; qt.offsetHeight; qt.style.animation='fadeIn .5s';
+}
+
+function genOpts(correct) {
+  const s=new Set([correct]); let tries=0;
+  while(s.size<3&&tries<50){const o=Math.floor(Math.random()*5)+1,sg=Math.random()<.5?-1:1,f=correct+o*sg;if(f>=0&&f<=20&&f!==correct)s.add(f);tries++}
+  while(s.size<3){const fb=s.size===1?(correct+1<=20?correct+1:correct-1):(correct+2<=20?correct+2:correct-2);if(fb>=0&&fb<=20)s.add(fb)}
+  return shuffle([...s]);
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function selectAnswer(btn,sel,correct) {
+  if(answered)return; answered=true;
+  document.querySelectorAll('.option-btn').forEach(b=>{if(parseInt(b.textContent)===correct)b.classList.add('correct')});
+  if(sel===correct){btn.classList.add('correct');roundCorrect++;spawnParticles('✅')}
+  else{btn.classList.add('wrong');spawnParticles('❌')}
+  document.getElementById('scoreDisplay').textContent=`⭐ ${roundCorrect}`;
+  setTimeout(()=>{questionNum++;questionNum<10?showQuestion():showResult()},1000);
+}
+
+function spawnParticles(emoji) {
+  const c=document.getElementById('particles');
+  for(let i=0;i<6;i++){
+    const p=document.createElement('div');p.className='particle';p.textContent=emoji;
+    p.style.left=`${35+Math.random()*30}%`;p.style.top=`${25+Math.random()*30}%`;
+    p.style.animationDelay=`${i*.06}s`;c.appendChild(p);
+    setTimeout(()=>p.remove(),1100);
+  }
+}
+
+function showResult() {
+  showPage('resultPage');
+  let ct,ci,cn;
+  if(roundCorrect>=9){ct='diamond';ci='💎';cn='钻石宝箱'}
+  else if(roundCorrect>=6){ct='gold';ci='🥇';cn='黄金宝箱'}
+  else if(roundCorrect>=3){ct='silver';ci='🥈';cn='白银宝箱'}
+  else{ct='bronze';ci='🥉';cn='青铜宝箱'}
+
+  document.getElementById('chestIcon').textContent=ci;
+  document.getElementById('chest').className=`chest ${ct}`;
+  document.getElementById('chestLabel').textContent=`答对 ${roundCorrect}/10 → 获得 ${cn}`;
+  document.getElementById('resultTitle').textContent=roundCorrect>=8?'🎉 太棒了！':roundCorrect>=5?'👍 不错！加油！':'💪 加油，下一轮会更好！';
+
+  const st=document.getElementById('chestStatus');
+  st.textContent='👆 点击宝箱开宝箱！';st.className='chest-status visible';
+  st.removeAttribute('data-opened');
+  document.getElementById('cardReveal').innerHTML='';document.getElementById('cardReveal').className='card-reveal';
+  document.getElementById('nextRoundBtn').style.display='none';
+
+  document.getElementById('chest').onclick=()=>{
+    if(st.dataset.opened)return;st.dataset.opened='true';
+    st.textContent='🎁 开宝箱中...';
+    const foods=FOODS[ct],food=foods[Math.floor(Math.random()*foods.length)];
+    const existing=collection.find(c=>c.name===food.name);
+    if(!existing){collection.push({...food,chestType:ct,round:currentRound});localStorage.setItem('mathGameCollection',JSON.stringify(collection))}
+    setTimeout(()=>{
+      st.textContent=`开出了：${food.name}`;
+      const card=document.getElementById('cardReveal');card.className='card-reveal show';
+      const rc=ct==='diamond'?'var(--diamond)':ct==='gold'?'var(--gold)':ct==='silver'?'var(--silver)':'var(--silver)';
+      card.innerHTML=`<div class="food-card" onclick="openCardDetail('${food.name}')">
+        <span class="food-emoji">${food.emoji}</span>
+        <div class="food-info"><h3>${food.name} 👆</h3><p>${food.desc}</p><p style="color:${rc}">${food.rarity} · 第 ${currentRound} 轮获得</p></div>
+      </div>`;
+      spawnParticles(food.emoji);
+    },800);
+    document.getElementById('chest').onclick=null;
+    document.getElementById('nextRoundBtn').style.display='block';
+  };
+}
+
+function nextRound(){startGame()}
+
+// ===== 收藏册 =====
+function showCollection() {
+  showPage('collectionPage');
+  const list=document.getElementById('collectionList');
+  if(collection.length===0){list.innerHTML='<div class="empty-msg">还没有收集到美食卡片<br>快去开宝箱吧！</div>';return}
+  const groups={bronze:[],silver:[],gold:[],diamond:[]};
+  collection.forEach(c=>{if(groups[c.chestType])groups[c.chestType].push(c)});
+  let html='';
+  const labels={bronze:'🥉 青铜',silver:'🥈 白银',gold:'🥇 黄金',diamond:'💎 钻石'};
+  const colors={bronze:'var(--bronze)',silver:'var(--silver)',gold:'var(--gold)',diamond:'var(--diamond)'};
+  Object.keys(groups).forEach(type=>{
+    if(groups[type].length>0){
+      html+=`<div style="margin-top:20px;font-size:15px;color:${colors[type]};font-weight:bold">${labels[type]} (${groups[type].length})</div>`;
+      html+='<div class="collection-grid">';
+      groups[type].forEach(card=>{
+        html+=`<div class="collection-item" onclick="openCardDetail('${card.name}')">
+          <span class="emoji">${card.emoji}</span>
+          <div class="name">${card.name}</div>
+          <div class="desc">${card.desc}</div>
+          <div class="desc">${card.rarity}</div>
+        </div>`;
+      });
+      html+='</div>';
+    }
+  });
+  list.innerHTML=html;
+}
+
+// ===== 卡片详情弹窗 =====
+function openCardDetail(name) {
+  const card=collection.find(c=>c.name===name);
+  if(!card)return;
+  const overlay=document.getElementById('cardOverlay');
+  const content=document.getElementById('overlayCardContent');
+  const rc=card.chestType==='diamond'?'var(--diamond)':card.chestType==='gold'?'var(--gold)':card.chestType==='silver'?'var(--silver)':'var(--bronze)';
+  const rcClass=card.chestType;
+  content.innerHTML=`
+    <div class="overlay-img">
+      <img src="${card.img}" alt="${card.name}" loading="lazy" style="background:linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))">
+    </div>
+    <div class="overlay-body">
+      <h2>${card.emoji} ${card.name}</h2>
+      <span class="rarity-badge ${rcClass}">${card.rarity}</span>
+      <p class="full-desc">${card.fullDesc}</p>
+      <p class="meta">来源：${card.chestType==='diamond'?'💎 钻石':card.chestType==='gold'?'🥇 黄金':card.chestType==='silver'?'🥈 白银':'🥉 青铜'}宝箱 · 第 ${card.round} 轮获得</p>
+    
+    </div>
+  `;
+  overlay.classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function closeCardDetail() {
+  document.getElementById('cardOverlay').classList.remove('show');
+  document.body.style.overflow='';
+}
+</script>
+
+</body>
+</html>
